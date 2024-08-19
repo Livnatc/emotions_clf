@@ -96,10 +96,11 @@ if __name__ == '__main__':
     cm_percentage = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]  # Calculate percentages
 
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm_percentage, annot=True, cmap='Blues', xticklabels=encoder.classes_, yticklabels=encoder.classes_)
+    sns.heatmap(cm_percentage, annot=True, cmap='Blues', xticklabels=emotions, yticklabels=emotions)
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
     plt.title('Confusion Matrix')
+    plt.savefig('confusion_matrix_Mel.png')
     plt.show()
 
     print('PyCharm')
