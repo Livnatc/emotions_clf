@@ -13,20 +13,20 @@ import torch.nn.functional as F
 import random
 
 
-def create_n_pairs(dataset, labels, n_negatives=4):
+def create_n_pairs(dataset, labels, indc, n_negatives=4):
     pairs = []
     pair_labels = []
 
-    num_classes = len(set(labels.numpy()))
+    num_classes = len(set(labels))
     label_indices = {i: [] for i in range(num_classes)}
 
     # Group the data by labels
-    for idx, label in enumerate(labels):
-        label = int(label.item())
+    for idx in range(len(indc)):
+        label = int(labels[indc[idx]])
         label_indices[label].append(dataset[idx])
 
     for idx, sample in enumerate(dataset):
-        label = int(labels[idx].item())
+        label = int(labels[indc[idx]])
 
         # Create a positive pair (same class)
         positive_pair = random.choice(label_indices[label])
@@ -241,10 +241,12 @@ if __name__ == '__main__':
 
     # Split into train and test sets
     train_size = int(0.8 * len(dataset))
-    test_size = len(dataset) - train_size
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    val_size = int(0.1 * len(dataset))
+    test_size = len(dataset) - train_size - val_size
+    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
 
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     # Example usage
@@ -254,11 +256,13 @@ if __name__ == '__main__':
     # Loss function
     n_pair_loss = NPairLoss(margin=1.0)
 
-    num_epochs = 3
-    optimizer = torch.optim.Adam(embedding_net.parameters(), lr=0.001)
+    num_epochs = 20
+    optimizer = torch.optim.Adam(embedding_net.parameters(), lr=0.0001)
 
     # Generate N-pairs
-    pairs, pair_labels = create_n_pairs(dataset, labels, n_negatives=4)
+    # pairs, pair_labels = create_n_pairs(dataset, labels, n_negatives=4)
+    pairs, pair_labels = create_n_pairs(train_dataset, train_dataset.dataset.labels, train_dataset.indices, n_negatives=4)
+    val_pairs, val_pair_labels = create_n_pairs(val_dataset, val_dataset.dataset.labels, val_dataset.indices, n_negatives=4)
 
     # Example Training Loop
     for epoch in range(num_epochs):

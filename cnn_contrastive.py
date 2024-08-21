@@ -42,7 +42,7 @@ def create_pairs(dataset, labels, inds):
     return pairs, pair_labels
 
 
-def extract_features_mfcc(file_path, n_mfcc=13, max_len=300):
+def extract_features_mfcc(file_path, n_mfcc=13):
     with open(file_path, 'rb') as f:
         audio, sr = librosa.load(f, sr=None)
 
@@ -102,8 +102,9 @@ class Emotions_clf(Dataset):
 
 
 class SimpleCNN(nn.Module):
-    def __init__(self, embedding_dim, n_mfcc=13, max_len=300):
+    def __init__(self, embedding_dim, n_mfcc=13):
         super(SimpleCNN, self).__init__()
+        # Convolutional layers
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
@@ -115,9 +116,10 @@ class SimpleCNN(nn.Module):
 
         # Fully connected layer to output embeddings
         self.fc1 = nn.Linear(self._to_linear, embedding_dim)
-        self.dropout = nn.Dropout(0.4)  # Dropout layer
+        self.dropout = nn.Dropout(0.5)
 
-        self.embedding_dim = embedding_dim  # Set embedding dimension
+        # Batch normalization (optional)
+        self.bn1 = nn.BatchNorm1d(embedding_dim)
 
     def calculate_output_size(self, n_mfcc, max_len):
         with torch.no_grad():
@@ -132,6 +134,69 @@ class SimpleCNN(nn.Module):
         x = x.view(x.size(0), -1)  # Flatten the tensor
         x = self.dropout(x)  # Apply dropout before the fully connected layer
         x = self.fc1(x)  # Output the embedding
+
+        return x
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride),
+                nn.BatchNorm2d(out_channels)
+            )
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+
+class ComplexMFCCEmbeddingNet(nn.Module):
+    def __init__(self, embedding_dim=128, n_mfcc=13, max_len=300, dropout_rate=0.5):
+        super(ComplexMFCCEmbeddingNet, self).__init__()
+
+        # Initial convolutional layers
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Residual blocks
+        self.resblock1 = ResidualBlock(32, 64, stride=2)
+        self.resblock2 = ResidualBlock(64, 128, stride=2)
+
+        # Global average pooling
+        self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Fully connected layer
+        self.fc1 = nn.Linear(128, embedding_dim)
+        self.dropout = nn.Dropout(dropout_rate)
+
+    def forward(self, x):
+        # Initial convolutional layer
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.pool1(x)
+
+        # Residual blocks
+        x = self.resblock1(x)
+        x = self.resblock2(x)
+
+        # Global average pooling
+        x = self.global_avg_pool(x)
+        x = x.view(x.size(0), -1)  # Flatten the tensor
+
+        # Fully connected layer with dropout
+        x = self.dropout(x)
+        x = self.fc1(x)
         return x
 
 
@@ -186,13 +251,14 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     # Example usage
-    embedding_dim = 64
-    embedding_net = SimpleCNN(embedding_dim=embedding_dim)
+    embedding_dim = 128
+    # embedding_net = SimpleCNN(embedding_dim=embedding_dim)
+    embedding_net = ComplexMFCCEmbeddingNet(embedding_dim=embedding_dim)
 
     # Loss function
     contrastive_loss = ContrastiveLoss(margin=1.0)
 
-    num_epochs = 50
+    num_epochs = 45
     optimizer = torch.optim.Adam(embedding_net.parameters(), lr=0.0001)
 
     pairs, pair_labels = create_pairs(train_dataset, train_dataset.dataset.labels, train_dataset.indices)
@@ -311,6 +377,7 @@ if __name__ == '__main__':
     # Plot t-SNE embeddings
     scatter_x = tsne_embeddings[:, 0]
     scatter_y = tsne_embeddings[:, 1]
+    # scatter_z = tsne_embeddings[:, 2]
 
     unique_labels = np.unique(all_labels)
     # unique_labels = np.unique([3, 4])
