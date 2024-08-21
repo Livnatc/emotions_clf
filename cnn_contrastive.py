@@ -13,20 +13,20 @@ import torch.nn.functional as F
 import random
 
 
-def create_pairs(dataset, labels):
+def create_pairs(dataset, labels, inds):
     pairs = []
     pair_labels = []
 
-    num_classes = len(set(labels.numpy()))  # Ensure labels are converted to numpy before getting the set
+    num_classes = len(set(labels))  # Ensure labels are converted to numpy before getting the set
     label_indices = {i: [] for i in range(num_classes)}
 
     # Group the data by labels
-    for idx, label in enumerate(labels):
-        label = int(label.item())  # Convert tensor to integer
+    for idx in range(len(inds)):
+        label = int(labels[inds[idx]])  # Convert tensor to integer
         label_indices[label].append(dataset[idx])
 
     for idx, sample in enumerate(dataset):
-        label = int(labels[idx].item())  # Convert tensor to integer
+        label = int(labels[inds[idx]])  # Convert tensor to integer
 
         # Create a positive pair (same class)
         positive_pair = random.choice(label_indices[label])
@@ -115,6 +115,8 @@ class SimpleCNN(nn.Module):
 
         # Fully connected layer to output embeddings
         self.fc1 = nn.Linear(self._to_linear, embedding_dim)
+        self.dropout = nn.Dropout(0.4)  # Dropout layer
+
         self.embedding_dim = embedding_dim  # Set embedding dimension
 
     def calculate_output_size(self, n_mfcc, max_len):
@@ -128,6 +130,7 @@ class SimpleCNN(nn.Module):
         x = self.pool1(torch.relu(self.conv1(x)))
         x = self.pool2(torch.relu(self.conv2(x)))
         x = x.view(x.size(0), -1)  # Flatten the tensor
+        x = self.dropout(x)  # Apply dropout before the fully connected layer
         x = self.fc1(x)  # Output the embedding
         return x
 
@@ -157,6 +160,7 @@ if __name__ == '__main__':
     base_path = 'dataset/dataset'
     internal_folds = os.listdir(os.path.join(base_path))
     max_len = 300
+    emotions = ['neutral', 'calm', 'happy', 'sad', 'angry', 'fearful', 'disgust', 'surprised']  # Assuming these are your emotion labels
 
     for fold in internal_folds:
         if fold != '.DS_Store':
@@ -172,29 +176,37 @@ if __name__ == '__main__':
     labels = torch.tensor(labels, dtype=torch.long)
 
     # Split into train and test sets
-    train_size = int(0.8 * len(dataset))
-    test_size = len(dataset) - train_size
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    train_size = int(0.7 * len(dataset))
+    val_size = int(0.2 * len(dataset))
+    test_size = len(dataset) - train_size - val_size
+    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
 
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     # Example usage
-    embedding_dim = 128
+    embedding_dim = 64
     embedding_net = SimpleCNN(embedding_dim=embedding_dim)
 
     # Loss function
     contrastive_loss = ContrastiveLoss(margin=1.0)
 
-    num_epochs = 30
-    optimizer = torch.optim.Adam(embedding_net.parameters(), lr=0.001)
+    num_epochs = 50
+    optimizer = torch.optim.Adam(embedding_net.parameters(), lr=0.0001)
 
-    pairs, pair_labels = create_pairs(dataset, labels)
+    pairs, pair_labels = create_pairs(train_dataset, train_dataset.dataset.labels, train_dataset.indices)
+    val_pairs, val_pair_labels = create_pairs(val_dataset, val_dataset.dataset.labels, val_dataset.indices)
     # Convert to PyTorch tensors
     pair_labels = torch.tensor(pair_labels, dtype=torch.float32)
+    val_pair_labels = torch.tensor(val_pair_labels, dtype=torch.float32)
 
+    train_losses = []
+    val_losses = []
     # Example Training Loop
     for epoch in range(num_epochs):
+
+        epoch_loss = 0.0
         for (input1, input2), label in zip(pairs, pair_labels):
             optimizer.zero_grad()
 
@@ -222,14 +234,63 @@ if __name__ == '__main__':
 
             # Compute the contrastive loss
             loss = contrastive_loss(output1, output2, label)
+            epoch_loss += loss.item()
 
             # Backpropagation and optimization
             loss.backward()
             optimizer.step()
 
+        epoch_loss /= len(pairs)
+        train_losses.append(epoch_loss)
         print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}")
 
-    print("Training Embeddings complete")
+        # Validation loop
+        with torch.no_grad():
+            val_loss = 0.0
+            for (val_input1, val_input2), val_label in zip(val_pairs, val_pair_labels):
+                # Unpack the validation input pairs
+                if isinstance(val_input1, tuple):
+                    val_input1 = val_input1[0]
+                if isinstance(val_input2, tuple):
+                    val_input2 = val_input2[0]
+
+                if isinstance(val_input1, np.ndarray):
+                    val_input1 = torch.from_numpy(val_input1).float()
+                if isinstance(val_input2, np.ndarray):
+                    val_input2 = torch.from_numpy(val_input2).float()
+
+                # Add batch dimension for validation inputs
+                val_input1 = val_input1.unsqueeze(0)
+                val_input2 = val_input2.unsqueeze(0)
+
+                # Ensure validation label is a tensor if not already
+                val_label = torch.tensor(val_label).float()
+
+                # Forward pass through the Siamese network
+                val_output1 = embedding_net(val_input1)
+                val_output2 = embedding_net(val_input2)
+
+                # Compute the contrastive loss for validation
+                val_loss += contrastive_loss(val_output1, val_output2, val_label).item()
+
+            # Average validation loss over the validation set
+            val_loss /= len(val_pairs)
+            val_losses.append(val_loss)
+            print(f"Validation Loss after Epoch [{epoch + 1}/{num_epochs}]: {val_loss:.4f}")
+
+    print("Training and Validation complete")
+
+    # Plot the training and validation losses
+    plt.figure(figsize=(10, 5))
+    plt.style.use('seaborn-v0_8-bright')
+    plt.plot(range(1, num_epochs + 1), train_losses, label='Training Loss')
+    plt.plot(range(1, num_epochs + 1), val_losses, label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss over Epochs')
+    plt.legend()
+    plt.savefig('training_validation_loss_CONTRASTIVE.png')
+    plt.show()
 
     # evaluate the embeddings and visualize them:
     embedding_net.eval()
@@ -244,7 +305,7 @@ if __name__ == '__main__':
     # T-SNE visualization
     from sklearn.manifold import TSNE
     # Apply t-SNE for dimensionality reduction
-    tsne = TSNE(n_components=2, perplexity=50, random_state=42)
+    tsne = TSNE(n_components=2, perplexity=30, random_state=42)
     tsne_embeddings = tsne.fit_transform(np.array(all_embeddings))
 
     # Plot t-SNE embeddings
@@ -252,13 +313,14 @@ if __name__ == '__main__':
     scatter_y = tsne_embeddings[:, 1]
 
     unique_labels = np.unique(all_labels)
-    unique_labels = np.unique([3, 4])
+    # unique_labels = np.unique([3, 4])
 
     colors = plt.cm.rainbow(np.linspace(0, 1, len(unique_labels)))
 
     for i, label in enumerate(unique_labels):
         indices = all_labels == label
-        plt.scatter(tsne_embeddings[indices, 0], tsne_embeddings[indices, 1], c=[colors[i]], label=label)
+        em_label = emotions[label]
+        plt.scatter(tsne_embeddings[indices, 0], tsne_embeddings[indices, 1], c=[colors[i]], label=em_label)
 
     plt.title('t-SNE Embedding Visualization with Different Colors for Each Label')
     plt.xlabel('t-SNE Dimension 1')

@@ -168,7 +168,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
-    num_epochs = 50
+    num_epochs = 70
     # Lists to store training and validation loss history
     train_loss_history = []
     val_loss_history = []
