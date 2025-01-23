@@ -15,9 +15,9 @@ Classifies emotions into predefined categories such as happiness, sadness, anger
 #### Model Architecture:
 Two models were tested to evaluate their performance on emotion classification:
 
-1. Simple Convolutional Neural Network (CNN) for audio feature learning.
+1. Simple Convolutional Neural Network (CNN)
 
-2. Support Vector Machine (SVM) for baseline performance comparison.
+2. Support Vector Machine (SVM)
 
 #### Visualization: 
 Tracks and visualizes loss and accuracy metrics during training.
