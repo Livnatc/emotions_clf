@@ -13,10 +13,11 @@ Utilizes MFCC (Mel-Frequency Cepstral Coefficients) and Mel-spectrogram features
 Classifies emotions into predefined categories such as happiness, sadness, anger, etc.
 
 #### Model Architecture:
+Two models were tested to evaluate their performance on emotion classification:
 
-Simple Convolutional Neural Network (CNN) for audio feature learning.
+1. Simple Convolutional Neural Network (CNN) for audio feature learning.
 
-Support Vector Machine (SVM) for baseline performance comparison.
+2. Support Vector Machine (SVM) for baseline performance comparison.
 
 #### Visualization: 
 Tracks and visualizes loss and accuracy metrics during training.
