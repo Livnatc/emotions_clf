@@ -48,12 +48,15 @@ CNN Performance: Achieved total accuracy of 35% on the test set with Mel feature
                           
                         precision    recall  f1-score  
         
-                calm       0.67      0.55      0.60        
-               happy       0.50      0.38      0.43        
-                 sad       0.62      0.71      0.67         
-               angry       0.30      0.50      0.38         
+                  calm       0.40      0.29      0.33        
+                 happy       0.14      0.20      0.17        
+                   sad       0.27      0.60      0.38         
+                 angry       0.50      0.25      0.33         
         
-               accuracy                        0.35
+                accuracy                         0.35
+
+confusion matrix of cnn results on mel-spectrogram:
+![Confusion_cnn_mel](https://github.com/user-attachments/assets/f37e818a-7ab7-485e-b6cf-fc4511ee19c5)
 
 SVM Performance: Achieved total accuracy of 51% using Mel features. 
                  more results:
@@ -70,7 +73,6 @@ SVM Performance: Achieved total accuracy of 51% using Mel features.
 confusion matrix of svm results on mel-spectrogram:
 ![confusion_matrix_mel_svm](https://github.com/user-attachments/assets/f4261178-1a05-43b7-b993-d5f71bd744db)
 
-confusion matrix of cnn results on mel-spectrogram:
-![Confusion_cnn_mel](https://github.com/user-attachments/assets/f37e818a-7ab7-485e-b6cf-fc4511ee19c5)
+
 
 
