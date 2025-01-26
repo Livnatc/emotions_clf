@@ -47,4 +47,7 @@ CNN Performance: Achieved 35% accuracy on the test set with Mel features.
 
 SVM Performance: Achieved 51% accuracy using Mel features.
 
+![confusion_matrix_mel_svm](https://github.com/user-attachments/assets/f4261178-1a05-43b7-b993-d5f71bd744db)
+![Confusion_cnn_mel](https://github.com/user-attachments/assets/f37e818a-7ab7-485e-b6cf-fc4511ee19c5)
+
 
