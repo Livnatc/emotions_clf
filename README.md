@@ -43,9 +43,29 @@ pip install -r requirements.txt
 
 Comparison of MFCC vs Mel-spectrogram inputs showed that Mel-spectrogram achieved significantly better results.
 
-CNN Performance: Achieved 35% accuracy on the test set with Mel features.
+CNN Performance: Achieved total accuracy of 35% on the test set with Mel features.
+                 more results:
+                          
+                        precision    recall  f1-score  
+        
+                calm       0.67      0.55      0.60        
+               happy       0.50      0.38      0.43        
+                 sad       0.62      0.71      0.67         
+               angry       0.30      0.50      0.38         
+        
+               accuracy                        0.35
 
-SVM Performance: Achieved 51% accuracy using Mel features.
+SVM Performance: Achieved total accuracy of 51% using Mel features. 
+                 more results:
+
+                      precision    recall  f1-score  
+        
+                calm       0.67      0.55      0.60        
+               happy       0.50      0.38      0.43        
+                 sad       0.62      0.71      0.67         
+               angry       0.30      0.50      0.38         
+        
+               accuracy                        0.51
 
 confusion matrix of svm results on mel-spectrogram:
 ![confusion_matrix_mel_svm](https://github.com/user-attachments/assets/f4261178-1a05-43b7-b993-d5f71bd744db)
