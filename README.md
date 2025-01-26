@@ -41,7 +41,7 @@ pip install -r requirements.txt
 
 ## Results
 
-Comparison of MFCC vs Mel-spectrogram inputs showed that Mel-spectrogram are significantly getting better results.
+Comparison of MFCC vs Mel-spectrogram inputs showed that Mel-spectrogram achieved significantly better results.
 
 CNN Performance: Achieved 35% accuracy on the test set with Mel features.
 
