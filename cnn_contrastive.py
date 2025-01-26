@@ -258,7 +258,7 @@ if __name__ == '__main__':
     # Loss function
     contrastive_loss = ContrastiveLoss(margin=1.0)
 
-    num_epochs = 45
+    num_epochs = 50
     optimizer = torch.optim.Adam(embedding_net.parameters(), lr=0.0001)
 
     pairs, pair_labels = create_pairs(train_dataset, train_dataset.dataset.labels, train_dataset.indices)

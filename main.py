@@ -34,7 +34,7 @@ class Emotions_clf:
                                  sr=self.sr)[0])
                 self.labels.append(int(f.split('-')[2].split('0')[1]))
 
-    def extract_features(self, audio, mfcc=False, chroma=False, mel=True):
+    def extract_features(self, audio, mfcc=True, chroma=False, mel=False):
 
         features = []
         if mfcc:
@@ -53,10 +53,11 @@ class Emotions_clf:
 
         X, y = [], []
 
-        for idx,f in enumerate(self.dataset):
-            features = self.extract_features(f)
-            X.append(features)
-            y.append(self.labels[idx])
+        for idx, f in enumerate(self.dataset):
+            if self.labels[idx] in range(1,5):
+                features = self.extract_features(f)
+                X.append(features)
+                y.append(self.labels[idx])
 
         X = np.array(X)
         y = np.array(y)
@@ -85,7 +86,8 @@ if __name__ == '__main__':
 
     y_pred = svm_model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    emotions = ['neutral', 'calm', 'happy', 'sad', 'angry', 'fearful', 'disgust', 'surprised']
+    # emotions = ['neutral', 'calm', 'happy', 'sad', 'angry', 'fearful', 'disgust', 'surprised']
+    emotions = ['calm', 'happy', 'sad', 'angry']
     report = classification_report(y_test, y_pred, target_names=emotions)
     print(f"Accuracy: {accuracy:.2f}")
     print("Classification Report:")
@@ -96,10 +98,12 @@ if __name__ == '__main__':
     cm_percentage = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]  # Calculate percentages
 
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm_percentage, annot=True, cmap='Blues', xticklabels=encoder.classes_, yticklabels=encoder.classes_)
+    # sns.heatmap(cm_percentage, annot=True, cmap='Blues', xticklabels=encoder.classes_, yticklabels=encoder.classes_)
+    sns.heatmap(cm_percentage, annot=True, cmap='Blues', xticklabels=emotions, yticklabels=emotions)
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
     plt.title('Confusion Matrix')
+    plt.savefig('confusion_matrix.png')
     plt.show()
 
     print('PyCharm')

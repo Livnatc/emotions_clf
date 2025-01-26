@@ -62,7 +62,7 @@ class Emotions_clf(Dataset):
     def __getitem__(self, idx):
         file_path = self.file_paths[idx]
         label = self.labels[idx]
-        features = extract_features_mfcc(file_path)
+        features = extract_features(file_path)
 
         if self.transform:
             features = self.transform(features)
@@ -132,7 +132,9 @@ class SimpleCNN_mfcc(nn.Module):
 
 if __name__ == '__main__':
 
-    emotions = ['neutral', 'calm', 'happy', 'sad', 'angry', 'fearful', 'disgust', 'surprised']  # Assuming these are your emotion labels
+    emotions = ['neutral', 'calm', 'happy', 'sad', 'angry', 'fearful', 'disgust', 'surprised']
+    emotions = ['calm', 'happy', 'sad', 'angry']
+    # Assuming these are your emotion labels
 
     file_paths = []
     labels = []
@@ -143,9 +145,11 @@ if __name__ == '__main__':
     for fold in internal_folds:
         if fold != '.DS_Store':
             for filename in os.listdir(os.path.join(base_path, fold)):
-                file_path = os.path.join(base_path, fold, filename)
-                file_paths.append(file_path)
-                labels.append(int(filename.split('-')[2].split('0')[1]) - 1)
+                label = int(filename.split('-')[2].split('0')[1]) - 1
+                if label in range(0, 4):
+                    file_path = os.path.join(base_path, fold, filename)
+                    file_paths.append(file_path)
+                    labels.append(label)
 
     dataset = Emotions_clf(file_paths, labels)
 
@@ -163,7 +167,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-    model = SimpleCNN_mfcc(num_classes=len(set(labels.numpy())))
+    model = SimpleCNN(num_classes=len(set(labels.numpy())))
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
