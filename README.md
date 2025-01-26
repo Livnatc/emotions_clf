@@ -41,9 +41,10 @@ pip install -r requirements.txt
 
 ## Results
 
-CNN Performance: Achieved XX% accuracy on the test set with MFCC features.
+Comparison of MFCC vs Mel-spectrogram inputs showed that Mel-spectrogram are significantly getting better results.
 
-SVM Performance: Achieved XX% accuracy using MFCC features.
+CNN Performance: Achieved 35% accuracy on the test set with Mel features.
 
-Comparison of MFCC vs Mel-spectrogram inputs showed that [add your observation here].
+SVM Performance: Achieved 51% accuracy using Mel features.
+
 
